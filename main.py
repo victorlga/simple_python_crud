@@ -1,11 +1,15 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
+import os
 import mysql.connector
 
 app = FastAPI()
 
+
+
 def create_connection():
+    database_host = os.getenv("DATABASE_HOST")
     connection = mysql.connector.connect(
-        host="localhost",
+        host=database_host,
         user="username",
         password="super_secret_password",
         database="mysql_db"
@@ -58,4 +62,4 @@ def delete_user(user_id: int):
     return {"status": "User deleted"}
 
 # To run the server:
-# uvicorn crud:app --reload
+# uvicorn main:app --reload
