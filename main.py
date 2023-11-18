@@ -1,7 +1,57 @@
 from fastapi import FastAPI
 import os
 import mysql.connector
-from mysql.connector import errorcode
+import logging
+import time
+import boto3
+from botocore.exceptions import NoCredentialsError
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger()
+
+# Create a CloudWatch log client
+try:
+    log_client = boto3.client('logs', region_name="us-east-1")
+except NoCredentialsError:
+    logger.error("AWS credentials not found")
+
+LOG_GROUP = '/my-fastapi-app/logs'
+LOG_STREAM = os.getenv("INSTANCE_ID")
+
+# Function to push logs to CloudWatch
+def push_logs_to_cloudwatch(log_message):
+    try:
+        log_client.put_log_events(
+            logGroupName=LOG_GROUP,
+            logStreamName=LOG_STREAM,
+            logEvents=[
+                {
+                    'timestamp': int(round(time.time() * 1000)),
+                    'message': log_message
+                },
+            ],
+        )
+    except Exception as e:
+        logger.error(f"Error sending logs to CloudWatch: {e}")
+
+# Use this function to log messages
+push_logs_to_cloudwatch("Your log message here")
+
+def put_custom_metric(metric_name, value):
+    cloudwatch = boto3.client('cloudwatch', region_name='YOUR_AWS_REGION') # Replace with your region
+    cloudwatch.put_metric_data(
+        Namespace='YourApplication',
+        MetricData=[
+            {
+                'MetricName': metric_name,
+                'Value': value,
+                'Unit': 'Count'
+            },
+        ]
+    )
+
+
 
 app = FastAPI()
 
@@ -27,6 +77,7 @@ def create_users_table():
     try:
         cursor.execute(create_table_query)
         connection.commit()
+        put_custom_metric('CreateUsersTable', 1)
     except mysql.connector.Error as err:
         print(f"Failed creating table: {err}")
         raise
@@ -48,6 +99,7 @@ def create_user(name: str, email: str):
     connection.commit()
     cursor.close()
     connection.close()
+    put_custom_metric('CreateUser', 1)
     return {"name": name, "email": email}
 
 @app.get("/users/")
@@ -58,6 +110,7 @@ def get_users():
     users = cursor.fetchall()
     cursor.close()
     connection.close()
+    put_custom_metric('GetUsers', 1)
     return users
 
 @app.put("/users/{user_id}")
@@ -70,6 +123,7 @@ def update_user(user_id: int, name: str, email: str):
     connection.commit()
     cursor.close()
     connection.close()
+    put_custom_metric('UpdateUser', 1)
     return {"id": user_id, "name": name, "email": email}
 
 @app.delete("/users/{user_id}")
@@ -81,7 +135,5 @@ def delete_user(user_id: int):
     connection.commit()
     cursor.close()
     connection.close()
+    put_custom_metric('DeleteUser', 1)
     return {"status": "User deleted"}
-
-# To run the server:
-# uvicorn main:app --reload
