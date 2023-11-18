@@ -77,7 +77,6 @@ def create_users_table():
     try:
         cursor.execute(create_table_query)
         connection.commit()
-        put_custom_metric('CreateUsersTable', 1)
     except mysql.connector.Error as err:
         print(f"Failed creating table: {err}")
         raise
