@@ -6,12 +6,11 @@ from mysql.connector import errorcode
 app = FastAPI()
 
 def create_connection():
-    database_host = os.getenv("DATABASE_HOST")
     connection = mysql.connector.connect(
-        host=database_host,
-        user=os.getenv("DATABASE_USER"),
-        password=os.getenv("DATABASE_PASSWORD"),
-        database=os.getenv("DATABASE_NAME")
+        host=os.getenv("DB_HOST"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASS"),
+        database=os.getenv("DB_NAME")
     )
     return connection
 
