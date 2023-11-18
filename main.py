@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 import os
 import mysql.connector
 from mysql.connector import errorcode
