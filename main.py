@@ -1,20 +1,43 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 import os
 import mysql.connector
+from mysql.connector import errorcode
 
 app = FastAPI()
-
-
 
 def create_connection():
     database_host = os.getenv("DATABASE_HOST")
     connection = mysql.connector.connect(
         host=database_host,
-        user="username",
-        password="super_secret_password",
-        database="mysql_db"
+        user=os.getenv("DATABASE_USER"),
+        password=os.getenv("DATABASE_PASSWORD"),
+        database=os.getenv("DATABASE_NAME")
     )
     return connection
+
+def create_users_table():
+    connection = create_connection()
+    cursor = connection.cursor()
+    create_table_query = """
+    CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255),
+        email VARCHAR(255)
+    );
+    """
+    try:
+        cursor.execute(create_table_query)
+        connection.commit()
+    except mysql.connector.Error as err:
+        print(f"Failed creating table: {err}")
+        raise
+    finally:
+        cursor.close()
+        connection.close()
+
+@app.on_event("startup")
+async def startup_event():
+    create_users_table()
 
 @app.post("/users/")
 def create_user(name: str, email: str):
