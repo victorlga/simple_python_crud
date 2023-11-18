@@ -35,11 +35,8 @@ def push_logs_to_cloudwatch(log_message):
     except Exception as e:
         logger.error(f"Error sending logs to CloudWatch: {e}")
 
-# Use this function to log messages
-push_logs_to_cloudwatch("Your log message here")
-
 def put_custom_metric(metric_name, value):
-    cloudwatch = boto3.client('cloudwatch', region_name='YOUR_AWS_REGION') # Replace with your region
+    cloudwatch = boto3.client('cloudwatch', region_name="us-east-1")
     cloudwatch.put_metric_data(
         Namespace='YourApplication',
         MetricData=[
@@ -98,6 +95,7 @@ def create_user(name: str, email: str):
     connection.commit()
     cursor.close()
     connection.close()
+    push_logs_to_cloudwatch(f"Create user with name {name} and email {email}")
     put_custom_metric('CreateUser', 1)
     return {"name": name, "email": email}
 
@@ -109,6 +107,7 @@ def get_users():
     users = cursor.fetchall()
     cursor.close()
     connection.close()
+    push_logs_to_cloudwatch("Get all users")
     put_custom_metric('GetUsers', 1)
     return users
 
@@ -122,6 +121,7 @@ def update_user(user_id: int, name: str, email: str):
     connection.commit()
     cursor.close()
     connection.close()
+    push_logs_to_cloudwatch(f"Update user by id: {user_id}. Name: {name}. Email: {email}")
     put_custom_metric('UpdateUser', 1)
     return {"id": user_id, "name": name, "email": email}
 
@@ -134,5 +134,6 @@ def delete_user(user_id: int):
     connection.commit()
     cursor.close()
     connection.close()
+    push_logs_to_cloudwatch(f"Delete user by id: {user_id}. Name: {name}. Email: {email}")
     put_custom_metric('DeleteUser', 1)
     return {"status": "User deleted"}
