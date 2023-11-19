@@ -1,11 +1,35 @@
-from fastapi import FastAPI
-import os
-import mysql.connector
-import logging
-import time
 import boto3
-from botocore.exceptions import NoCredentialsError
+import logging
+import mysql.connector
+import os
+import time
+from botocore.exceptions import ClientError, NoCredentialsError
 from contextlib import asynccontextmanager
+from fastapi import FastAPI
+
+def get_secret():
+
+    secret_name = "app/mysql/credentials"
+    region_name = "us-east-1"
+
+    # Create a Secrets Manager client
+    session = boto3.session.Session()
+    client = session.client(
+        service_name='secretsmanager',
+        region_name=region_name
+    )
+
+    try:
+        get_secret_value_response = client.get_secret_value(
+            SecretId=secret_name
+        )
+    except ClientError as e:
+        raise e
+
+    # Decrypts secret using the associated KMS key.
+    secret = get_secret_value_response['SecretString']
+
+    return eval(secret)
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -65,11 +89,12 @@ async def app_lifespan(app: FastAPI):
 app = FastAPI(lifespan=app_lifespan)
 
 def create_connection():
+    secret = get_secret()
     connection = mysql.connector.connect(
         host=os.getenv("DB_HOST"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASS"),
-        database=os.getenv("DB_NAME")
+        user=secret["username"],
+        password=secret["password"],
+        database=secret["name"]
     )
     return connection
 
