@@ -5,6 +5,7 @@ import logging
 import time
 import boto3
 from botocore.exceptions import NoCredentialsError
+from contextlib import asynccontextmanager
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -35,32 +36,6 @@ def push_logs_to_cloudwatch(log_message):
     except Exception as e:
         logger.error(f"Error sending logs to CloudWatch: {e}")
 
-def put_custom_metric(metric_name, value):
-    cloudwatch = boto3.client('cloudwatch', region_name="us-east-1")
-    cloudwatch.put_metric_data(
-        Namespace='YourApplication',
-        MetricData=[
-            {
-                'MetricName': metric_name,
-                'Value': value,
-                'Unit': 'Count'
-            },
-        ]
-    )
-
-
-
-app = FastAPI()
-
-def create_connection():
-    connection = mysql.connector.connect(
-        host=os.getenv("DB_HOST"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASS"),
-        database=os.getenv("DB_NAME")
-    )
-    return connection
-
 def create_users_table():
     connection = create_connection()
     cursor = connection.cursor()
@@ -81,9 +56,22 @@ def create_users_table():
         cursor.close()
         connection.close()
 
-@app.on_event("startup")
-async def startup_event():
-    create_users_table()
+@asynccontextmanager
+async def app_lifespan(app: FastAPI):
+    # Startup logic: Creating users table
+    await create_users_table()
+    yield
+
+app = FastAPI(lifespan=app_lifespan)
+
+def create_connection():
+    connection = mysql.connector.connect(
+        host=os.getenv("DB_HOST"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASS"),
+        database=os.getenv("DB_NAME")
+    )
+    return connection
 
 @app.post("/users/")
 def create_user(name: str, email: str):
@@ -96,7 +84,6 @@ def create_user(name: str, email: str):
     cursor.close()
     connection.close()
     push_logs_to_cloudwatch(f"Create user with name {name} and email {email}")
-    put_custom_metric('CreateUser', 1)
     return {"name": name, "email": email}
 
 @app.get("/users/")
@@ -108,7 +95,6 @@ def get_users():
     cursor.close()
     connection.close()
     push_logs_to_cloudwatch("Get all users")
-    put_custom_metric('GetUsers', 1)
     return users
 
 @app.put("/users/{user_id}")
@@ -122,7 +108,6 @@ def update_user(user_id: int, name: str, email: str):
     cursor.close()
     connection.close()
     push_logs_to_cloudwatch(f"Update user by id: {user_id}. Name: {name}. Email: {email}")
-    put_custom_metric('UpdateUser', 1)
     return {"id": user_id, "name": name, "email": email}
 
 @app.delete("/users/{user_id}")
@@ -134,6 +119,5 @@ def delete_user(user_id: int):
     connection.commit()
     cursor.close()
     connection.close()
-    push_logs_to_cloudwatch(f"Delete user by id: {user_id}. Name: {name}. Email: {email}")
-    put_custom_metric('DeleteUser', 1)
+    push_logs_to_cloudwatch(f"Delete user by id: {user_id}")
     return {"status": "User deleted"}
