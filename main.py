@@ -22,10 +22,10 @@ async def get_secret():
     loop = asyncio.get_running_loop()
 
     try:
+        # Unpack the dictionary into keyword arguments
         get_secret_value_response = await loop.run_in_executor(
             None,  # Uses the default executor
-            client.get_secret_value,
-            {'SecretId': secret_name}
+            lambda: client.get_secret_value(SecretId=secret_name)
         )
     except ClientError as e:
         raise e
@@ -34,6 +34,7 @@ async def get_secret():
     secret = get_secret_value_response['SecretString']
 
     return eval(secret)
+
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
