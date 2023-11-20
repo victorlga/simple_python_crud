@@ -100,7 +100,7 @@ async def app_lifespan(app: FastAPI):
 app = FastAPI(lifespan=app_lifespan)
 
 async def create_connection():
-    secret = get_secret()
+    secret = await get_secret()
     conn = await aiomysql.connect(
         host=os.getenv("DB_HOST"),
         user=secret["username"],
@@ -120,7 +120,7 @@ async def create_user(name: str, email: str):
         await conn.commit()
     
     conn.close()  # Ensure the connection is closed
-    push_logs_to_cloudwatch(f"Create user with name {name} and email {email}")
+    await push_logs_to_cloudwatch(f"Create user with name {name} and email {email}")
 
     return {"name": name, "email": email}
 
@@ -132,7 +132,7 @@ async def get_users():
         users = await cursor.fetchall()
     
     conn.close()  # Ensure the connection is closed
-    push_logs_to_cloudwatch("Get all users")
+    await push_logs_to_cloudwatch("Get all users")
 
     return users
 
@@ -146,7 +146,7 @@ async def update_user(user_id: int, name: str, email: str):
         await conn.commit()
     
     conn.close()  # Ensure the connection is closed
-    push_logs_to_cloudwatch(f"Update user by id: {user_id}. Name: {name}. Email: {email}")
+    await push_logs_to_cloudwatch(f"Update user by id: {user_id}. Name: {name}. Email: {email}")
 
     return {"id": user_id, "name": name, "email": email}
 
@@ -160,7 +160,7 @@ async def delete_user(user_id: int):
         await conn.commit()
     
     conn.close()  # Ensure the connection is closed
-    push_logs_to_cloudwatch(f"Delete user by id: {user_id}")
+    await push_logs_to_cloudwatch(f"Delete user by id: {user_id}")
 
     return {"status": "User deleted"}
 
