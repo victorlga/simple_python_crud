@@ -57,17 +57,16 @@ async def push_logs_to_cloudwatch(log_message):
     try:
         await loop.run_in_executor(
             None,  # Uses the default executor (which is a ThreadPoolExecutor)
-            log_client.put_log_events,
-            {
-                'logGroupName': LOG_GROUP,
-                'logStreamName': LOG_STREAM,
-                'logEvents': [
+            lambda: log_client.put_log_events(
+                logGroupName=LOG_GROUP,
+                logStreamName=LOG_STREAM,
+                logEvents=[
                     {
                         'timestamp': int(round(time.time() * 1000)),
                         'message': log_message
                     },
                 ],
-            }
+            )
         )
     except Exception as e:
         logger.error(f"Error sending logs to CloudWatch: {e}")
