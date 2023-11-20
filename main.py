@@ -157,10 +157,14 @@ async def delete_user(user_id: int):
     async with conn.cursor() as cursor:
         query = "DELETE FROM users WHERE id = %s"
         await cursor.execute(query, (user_id,))
+        affected_rows = cursor.rowcount  # Get the number of rows affected
         await conn.commit()
     
     conn.close()  # Ensure the connection is closed
-    await push_logs_to_cloudwatch(f"Delete user by id: {user_id}")
+    if affected_rows > 0:
+        await push_logs_to_cloudwatch(f"Delete user by id: {user_id}")
+        return {"status": "User deleted"}
+    else:
+        return {"status": "User not found"}
 
-    return {"status": "User deleted"}
 
